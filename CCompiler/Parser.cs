@@ -1,8 +1,11 @@
-﻿using System;
+﻿//Louis DESPLANCHE
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+
 
 namespace CCompiler
 {
@@ -36,23 +39,28 @@ namespace CCompiler
             //Transforme la chaine en tableau pour être traité par la boucle
             char[] codeArray = aCode.ToArray();
 
-            //
+            
             for(int i = 0; i< codeArray.Length; i++)
             {
                 char c = codeArray[i];
-
+                
+                
                 if (c == '{') bracketCounter++;
                 else if (c == '}') bracketCounter--;
 
-                
-
-                else if(bracketCounter == 0)
+                //On verifie que l'on ne se trouve pas dans une fonction
+                else if (bracketCounter == 0)
                 {
+                    //On regarde s'il s'agit d'une instruction d'inclusion
                     if (c == '#')
                     {
+                        //On réinitialise le buffer
                         strBuffer = "";
 
+                        //On ajoute 8 au pointer pour passer le #include
                         i += 8;
+
+                        //On check le contenu de l'instruction
                         for (int y=0; i < codeArray.Length; i++)
                         {
                             c = codeArray[i];
@@ -61,20 +69,31 @@ namespace CCompiler
 
                         }
 
+                        //On ajoute l'entrée à la liste des inclusions
                         includes.Add(strBuffer);
+
+                        //On reinitialise le buffer
                         strBuffer = "";
+                        //On arrete la boucle (par soucis d'optimisation)
                         continue;
                     }
+
+                    //On ajoute au buffer uniquement les lettres
                     if (char.IsLetter(c)) strBuffer += c;
+                    //Si on revient à la ligne le buffer se reinitialise
                     if (c == '\n') strBuffer = "";
 
-
+                    //On va regarder dans le programme s'il n'y a pas un début de methode/variable
+                    //Pour cela on repere les types
                     foreach(Type type in Type.TypesList)
                     {
+
                         if(strBuffer.StartsWith(type.LanguageName))
                         {
+                            //Une fois qu'on a identifié le type on reinitialise le buffer
                             strBuffer = "";
-                            string varName = "";
+
+                            //On ajoute 2 au pointeur puis on récupere le reste de la signature
                             i += 2;
                             for (int y = 0; i < codeArray.Length; i++)
                             {
@@ -83,13 +102,16 @@ namespace CCompiler
                                 strBuffer += codeArray[i];
                             }
 
+                            //On sépare la signature des paramètres
                             string[] signature = strBuffer.Split('(');
+                            //On créé une variable afin d'y entré le nom de la methode/variable globale
+                            string varName = signature[0];
 
-                            varName = signature[0];
-
+                            //Si la signature n'a qu'une partie alors il s'agit d'une variable dans la cas contraire c'est une methode
                             if (signature.Length == 1) instructions.Add(new Variable(varName, type, Statut.free));
                             if (signature.Length > 1)
                             {
+                                //On cherche la liste de paramètres de la fontion
                                 List<Variable> vParams = new List<Variable>();
                                 foreach (string param in signature[1].Split(','))
                                 {
@@ -97,6 +119,7 @@ namespace CCompiler
                                     {
                                         if(param.Replace(" ", "").StartsWith(vType.LanguageName))
                                         {
+                                            //On ajoute a la liste des paramètres
                                             vParams.Add(new Variable(param.Replace(vType.LanguageName, ""), vType, Statut.constant));
                                             break;
                                         }
@@ -111,7 +134,7 @@ namespace CCompiler
                     }
                 }
             }
-
+            //Verfie si les fonctions sont bien fermé
             if (bracketCounter > 0) throw new Exception("Il manque }");
             if (bracketCounter < 0) throw new Exception("Il manque {");
         }
